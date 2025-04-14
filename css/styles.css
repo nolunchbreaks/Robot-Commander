@@ -1,0 +1,208 @@
+:root {
+    --primary: #ff6a00;
+    --secondary: #00bcd4;
+    --dark: #1a1a2e;
+    --light: #f4f4f4;
+    --success: #4CAF50;
+    --danger: #f44336;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Orbitron', sans-serif;
+}
+
+body {
+    background: linear-gradient(135deg, var(--dark), #0f3460);
+    color: var(--light);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+header {
+    background: rgba(15, 52, 96, 0.9);
+    padding: 1rem;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+header h1 {
+    font-size: 2.5rem;
+    color: var(--primary);
+    text-shadow: 0 0 8px var(--primary);
+}
+
+.user-info {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    gap: 1rem;
+}
+
+.cloud-services {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 0.8rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.service-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.active { background: var(--success); }
+
+.tabs {
+    display: flex;
+    background: rgba(15, 52, 96, 0.8);
+    border-radius: 8px 8px 0 0;
+}
+
+.tab {
+    flex: 1;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.tab.active {
+    background: var(--primary);
+    color: var(--dark);
+}
+
+.tab-content {
+    background: rgba(22, 33, 62, 0.95);
+    padding: 2rem;
+    border-radius: 0 0 8px 8px;
+    min-height: 600px;
+}
+
+.hidden {
+    display: none;
+}
+
+.button {
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.button-primary {
+    background: var(--primary);
+    color: var(--dark);
+}
+
+.button-primary:hover {
+    background: #ff8533;
+    transform: translateY(-2px);
+}
+
+.parts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.part-item {
+    background: rgba(15, 52, 96, 0.7);
+    padding: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.part-item:hover {
+    background: rgba(255, 106, 0, 0.4);
+}
+
+.part-item.selected {
+    border: 2px solid var(--primary);
+}
+
+.stat-bar-fill {
+    height: 10px;
+    background: var(--primary);
+    border-radius: 5px;
+    transition: width 0.5s;
+}
+
+.battle-field {
+    background: url('../assets/images/arena-bg.jpg') center/cover;
+    border-radius: 8px;
+    min-height: 400px;
+    position: relative;
+}
+
+.health-bar {
+    width: 200px;
+    height: 15px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.health-fill {
+    height: 100%;
+    background: var(--success);
+    transition: width 0.5s;
+}
+
+.notification {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 8px;
+    z-index: 100;
+    animation: slideIn 0.5s forwards;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+.tutorial-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.tutorial-content {
+    background: var(--dark);
+    padding: 2rem;
+    border-radius: 8px;
+    max-width: 500px;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .tabs { flex-direction: column; }
+    .build-container { flex-direction: column; }
+}

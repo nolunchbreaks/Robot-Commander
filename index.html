@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Commander: Battle Arena</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="assets/images/favicon.ico">
+</head>
+<body>
+    <div class="overlay" id="loading-screen">
+        <div class="loader"></div>
+    </div>
+    
+    <header>
+        <div class="container">
+            <h1>Robot Commander: Battle Arena</h1>
+            <p>Build, Battle, Conquer!</p>
+            <div class="user-info">
+                <span id="credits">Credits: 1000</span>
+                <span id="level">Level: 1</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="cloud-services">
+        <h3>System Status</h3>
+        <div class="cloud-service"><span class="service-indicator active"></span>Combat Engine</div>
+        <div class="cloud-service"><span class="service-indicator active"></span>Parts Database</div>
+        <div class="cloud-service"><span class="service-indicator active"></span>Matchmaking</div>
+    </div>
+
+    <main class="container game-area">
+        <nav class="tabs" role="tablist">
+            <button class="tab active" data-tab="build" role="tab" aria-selected="true" aria-controls="build-panel">Build</button>
+            <button class="tab" data-tab="battle" role="tab" aria-selected="false" aria-controls="battle-panel">Battle</button>
+            <button class="tab" data-tab="stats" role="tab" aria-selected="false" aria-controls="stats-panel">Stats</button>
+            <button class="tab" data-tab="campaign" role="tab" aria-selected="false" aria-controls="campaign-panel">Campaign</button>
+        </nav>
+
+        <div class="tab-content">
+            <section id="build-panel" class="tab-pane" role="tabpanel"></section>
+            <section id="battle-panel" class="tab-pane hidden" role="tabpanel"></section>
+            <section id="stats-panel" class="tab-pane hidden" role="tabpanel"></section>
+            <section id="campaign-panel" class="tab-pane hidden" role="tabpanel">
+                <div class="campaign-container">
+                    <h2>Campaign Mode</h2>
+                    <div class="mission-list" id="mission-list"></div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <div class="notification" id="notification" role="alert"></div>
+
+    <script src="js/main.js" type="module"></script>
+</body>
+</html>
