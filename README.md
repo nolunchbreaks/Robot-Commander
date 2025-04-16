@@ -2,7 +2,7 @@
 
 ## Overview
 
-Robot Commander: Battle Arena is an exciting and interactive game where you can build, battle, and conquer opponents using robots. The game features various modes such as building your robot, battling against other players, tracking stats, and progressing through the campaign. You earn credits, level up, and unlock new features as you continue to play.
+Robot Commander: Battle Arena is an exciting and interactive game where you can build, battle, and conquer opponents using robots. The game features various modes such as building your robot, battling against other players, tracking stats, and progressing through the campaign. You earn credits, level up, and unlock new features as you continue to play. This project is still a working progress and i welcome contributions.
 
 This project is a submission for the **Alibaba Cloud Challenge**.
 
