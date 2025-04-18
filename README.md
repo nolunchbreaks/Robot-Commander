@@ -41,6 +41,9 @@ To run this project locally, make sure you have a web browser and a code editor.
 ### Running Locally
 
 Simply open the `index.html` file in any modern web browser (e.g., Chrome, Firefox, Safari) to play the game.
+![Screenshot (234)](https://github.com/user-attachments/assets/4cdaef82-e537-41fe-8a7d-3d85841f88cf)
+![Screenshot (235)](https://github.com/user-attachments/assets/a4d0ed2e-1d41-4a59-9271-48b145d8e53c)
+![Screenshot (236)](https://github.com/user-attachments/assets/d8d7e9df-77ea-4683-b233-87260b9c1313)
 
 ## How to Contribute
 
