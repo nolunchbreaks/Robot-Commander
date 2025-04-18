@@ -3,56 +3,1275 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robot Commander: Battle Arena</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="icon" href="assets/images/favicon.ico">
+    <title>Battle Commander</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .hexagon {
+            position: relative;
+            width: 60px;
+            height: 34.64px;
+            background-color: #64C7CC;
+            margin: 17.32px 0;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            transition: all 0.2s ease;
+        }
+
+        .hexagon::before {
+            content: "";
+            position: absolute;
+            top: 1px;
+            left: 1px;
+            width: 58px;
+            height: 32.64px;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            background-color: #4CAF50;
+            z-index: -1;
+        }
+
+        .hexagon:hover {
+            transform: scale(1.1);
+            z-index: 10;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+        }
+
+        .hex-grid {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .hex-row {
+            display: flex;
+            margin-bottom: -17.32px;
+        }
+
+        .hex-row:nth-child(even) {
+            margin-left: 30px;
+        }
+
+        .fog-of-war {
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+
+        .unit {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        .health-bar {
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 4px;
+            background-color: #ff0000;
+        }
+
+        .health-fill {
+            height: 100%;
+            background-color: #00ff00;
+        }
+
+        .terrain-mountain {
+            background-color: #8B4513 !important;
+        }
+
+        .terrain-water {
+            background-color: #1E90FF !important;
+        }
+
+        .terrain-forest {
+            background-color: #228B22 !important;
+        }
+
+        .selected {
+            box-shadow: 0 0 0 3px yellow;
+        }
+
+        .movement-range {
+            box-shadow: 0 0 0 3px rgba(0, 255, 255, 0.5);
+        }
+
+        .attack-range {
+            box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.5);
+        }
+
+        .game-container {
+            perspective: 1000px;
+        }
+
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
 </head>
-<body>
-    <div class="overlay" id="loading-screen">
-        <div class="loader"></div>
-    </div>
-    
-    <header>
-        <div class="container">
-            <h1>Robot Commander: Battle Arena</h1>
-            <p>Build, Battle, Conquer!</p>
-            <div class="user-info">
-                <span id="credits">Credits: 1000</span>
-                <span id="level">Level: 1</span>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-4xl font-bold text-yellow-400">BATTLE COMMANDER</h1>
+                <p class="text-gray-400">Futuristic Turn-Based Strategy</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="bg-gray-800 px-4 py-2 rounded-lg">
+                    <div class="flex items-center">
+                        <i class="fas fa-coins text-yellow-400 mr-2"></i>
+                        <span id="credits">1000</span>
+                    </div>
+                </div>
+                <div class="bg-gray-800 px-4 py-2 rounded-lg">
+                    <div class="flex items-center">
+                        <i class="fas fa-bolt text-blue-400 mr-2"></i>
+                        <span id="energy">50</span>
+                    </div>
+                </div>
+                <button id="end-turn-btn" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-bold">
+                    END TURN
+                </button>
+            </div>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Game Board -->
+            <div class="game-container flex-1">
+                <div class="hex-grid" id="game-board"></div>
+            </div>
+
+            <!-- Side Panel -->
+            <div class="w-full lg:w-80 bg-gray-800 rounded-lg p-4">
+                <div class="mb-6">
+                    <h2 class="text-xl font-bold mb-2 border-b border-gray-700 pb-2">Unit Info</h2>
+                    <div id="unit-info" class="text-gray-300">
+                        <p class="text-center py-8">Select a unit to view details</p>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h2 class="text-xl font-bold mb-2 border-b border-gray-700 pb-2">Actions</h2>
+                    <div id="action-buttons" class="space-y-2">
+                        <button class="action-btn w-full bg-blue-600 hover:bg-blue-700 py-2 px-4 rounded disabled:opacity-50" disabled>
+                            Move
+                        </button>
+                        <button class="action-btn w-full bg-red-600 hover:bg-red-700 py-2 px-4 rounded disabled:opacity-50" disabled>
+                            Attack
+                        </button>
+                        <button class="action-btn w-full bg-green-600 hover:bg-green-700 py-2 px-4 rounded disabled:opacity-50" disabled>
+                            Special Ability
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <h2 class="text-xl font-bold mb-2 border-b border-gray-700 pb-2">Build Units</h2>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button class="build-btn bg-gray-700 hover:bg-gray-600 p-2 rounded" data-type="infantry">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-user text-xl mb-1"></i>
+                                <span>Infantry</span>
+                                <span class="text-xs text-gray-400">Cost: 100</span>
+                            </div>
+                        </button>
+                        <button class="build-btn bg-gray-700 hover:bg-gray-600 p-2 rounded" data-type="tank">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-tank text-xl mb-1"></i>
+                                <span>Tank</span>
+                                <span class="text-xs text-gray-400">Cost: 300</span>
+                            </div>
+                        </button>
+                        <button class="build-btn bg-gray-700 hover:bg-gray-600 p-2 rounded" data-type="artillery">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-explosion text-xl mb-1"></i>
+                                <span>Artillery</span>
+                                <span class="text-xs text-gray-400">Cost: 250</span>
+                            </div>
+                        </button>
+                        <button class="build-btn bg-gray-700 hover:bg-gray-600 p-2 rounded" data-type="drone">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-drone text-xl mb-1"></i>
+                                <span>Drone</span>
+                                <span class="text-xs text-gray-400">Cost: 200</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-    </header>
 
-    <div class="cloud-services">
-        <h3>System Status</h3>
-        <div class="cloud-service"><span class="service-indicator active"></span>Combat Engine</div>
-        <div class="cloud-service"><span class="service-indicator active"></span>Parts Database</div>
-        <div class="cloud-service"><span class="service-indicator active"></span>Matchmaking</div>
+        <!-- Game Log -->
+        <div class="mt-8 bg-gray-800 rounded-lg p-4">
+            <h2 class="text-xl font-bold mb-2 border-b border-gray-700 pb-2">Battle Log</h2>
+            <div id="game-log" class="h-40 overflow-y-auto text-sm space-y-1">
+                <p class="text-gray-400">Welcome to Battle Commander! Deploy your units and defeat the enemy forces.</p>
+            </div>
+        </div>
     </div>
 
-    <main class="container game-area">
-        <nav class="tabs" role="tablist">
-            <button class="tab active" data-tab="build" role="tab" aria-selected="true" aria-controls="build-panel">Build</button>
-            <button class="tab" data-tab="battle" role="tab" aria-selected="false" aria-controls="battle-panel">Battle</button>
-            <button class="tab" data-tab="stats" role="tab" aria-selected="false" aria-controls="stats-panel">Stats</button>
-            <button class="tab" data-tab="campaign" role="tab" aria-selected="false" aria-controls="campaign-panel">Campaign</button>
-        </nav>
-
-        <div class="tab-content">
-            <section id="build-panel" class="tab-pane" role="tabpanel"></section>
-            <section id="battle-panel" class="tab-pane hidden" role="tabpanel"></section>
-            <section id="stats-panel" class="tab-pane hidden" role="tabpanel"></section>
-            <section id="campaign-panel" class="tab-pane hidden" role="tabpanel">
-                <div class="campaign-container">
-                    <h2>Campaign Mode</h2>
-                    <div class="mission-list" id="mission-list"></div>
+    <!-- Tutorial Modal -->
+    <div id="tutorial-modal" class="fixed inset-0 flex items-center justify-center z-50 modal-overlay hidden">
+        <div class="bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-screen overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Battle Commander Tutorial</h2>
+                <button id="close-tutorial" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <h3 class="text-lg font-semibold mb-2">Game Overview</h3>
+                    <p>Battle Commander is a turn-based strategy game where you control futuristic military units to defeat enemy forces. Each turn you can move your units, attack enemies, and build new units.</p>
                 </div>
-            </section>
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-2">Resources</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><span class="text-yellow-400">Credits</span>: Used to build new units</li>
+                        <li><span class="text-blue-400">Energy</span>: Used for special abilities and some unit actions</li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-2">Unit Types</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-700 p-3 rounded">
+                            <div class="flex items-center mb-1">
+                                <i class="fas fa-user mr-2"></i>
+                                <span class="font-medium">Infantry</span>
+                            </div>
+                            <p class="text-sm">Basic combat unit. Good against drones.</p>
+                        </div>
+                        <div class="bg-gray-700 p-3 rounded">
+                            <div class="flex items-center mb-1">
+                                <i class="fas fa-tank mr-2"></i>
+                                <span class="font-medium">Tank</span>
+                            </div>
+                            <p class="text-sm">Heavy armor. Strong against infantry.</p>
+                        </div>
+                        <div class="bg-gray-700 p-3 rounded">
+                            <div class="flex items-center mb-1">
+                                <i class="fas fa-explosion mr-2"></i>
+                                <span class="font-medium">Artillery</span>
+                            </div>
+                            <p class="text-sm">Long range attack. Weak in close combat.</p>
+                        </div>
+                        <div class="bg-gray-700 p-3 rounded">
+                            <div class="flex items-center mb-1">
+                                <i class="fas fa-drone mr-2"></i>
+                                <span class="font-medium">Drone</span>
+                            </div>
+                            <p class="text-sm">Fast scout. Can fly over obstacles.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-2">How to Play</h3>
+                    <ol class="list-decimal pl-5 space-y-2">
+                        <li>Select a unit by clicking on it</li>
+                        <li>Choose an action (Move, Attack, or Special Ability)</li>
+                        <li>Click on a highlighted tile to execute the action</li>
+                        <li>Build new units when you have enough credits</li>
+                        <li>End your turn when you're done</li>
+                        <li>Destroy all enemy units to win!</li>
+                    </ol>
+                </div>
+                
+                <button id="start-game" class="w-full bg-green-600 hover:bg-green-700 py-2 px-4 rounded font-bold mt-4">
+                    Start Battle!
+                </button>
+            </div>
         </div>
-    </main>
+    </div>
 
-    <div class="notification" id="notification" role="alert"></div>
+    <!-- Victory/Defeat Modal -->
+    <div id="result-modal" class="fixed inset-0 flex items-center justify-center z-50 modal-overlay hidden">
+        <div class="bg-gray-800 rounded-lg p-8 max-w-md w-full text-center">
+            <h2 id="result-title" class="text-3xl font-bold mb-4"></h2>
+            <p id="result-message" class="mb-6"></p>
+            <div class="flex justify-center space-x-4">
+                <button id="restart-btn" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-bold">
+                    Play Again
+                </button>
+                <button id="quit-btn" class="bg-gray-600 hover:bg-gray-700 px-6 py-2 rounded-lg font-bold">
+                    Quit
+                </button>
+            </div>
+        </div>
+    </div>
 
-    <script src="js/main.js" type="module"></script>
+    <script>
+        // Game State
+        const gameState = {
+            gridSize: { rows: 10, cols: 10 },
+            tiles: [],
+            units: [],
+            enemyUnits: [],
+            selectedUnit: null,
+            currentPlayer: 'player',
+            credits: 1000,
+            energy: 50,
+            turn: 1,
+            gameOver: false,
+            buildingUnit: null,
+            fogOfWar: true,
+            visibleTiles: new Set(),
+            movementRange: new Set(),
+            attackRange: new Set(),
+            actionMode: null // 'move', 'attack', 'build'
+        };
+
+        // Unit Types
+        const unitTypes = {
+            infantry: {
+                name: "Infantry",
+                icon: "fa-user",
+                color: "text-blue-400",
+                cost: 100,
+                health: 100,
+                attack: 20,
+                defense: 10,
+                movement: 3,
+                range: 1,
+                special: "Suppressive Fire (25 energy): Reduces enemy attack power by 50% for 1 turn"
+            },
+            tank: {
+                name: "Tank",
+                icon: "fa-tank",
+                color: "text-gray-400",
+                cost: 300,
+                health: 200,
+                attack: 40,
+                defense: 30,
+                movement: 2,
+                range: 2,
+                special: "Barrage (40 energy): Attack all enemies in range"
+            },
+            artillery: {
+                name: "Artillery",
+                icon: "fa-explosion",
+                color: "text-red-400",
+                cost: 250,
+                health: 80,
+                attack: 50,
+                defense: 5,
+                movement: 1,
+                range: 4,
+                special: "Precision Strike (30 energy): Guaranteed hit with 50% bonus damage"
+            },
+            drone: {
+                name: "Drone",
+                icon: "fa-drone",
+                color: "text-green-400",
+                cost: 200,
+                health: 60,
+                attack: 15,
+                defense: 5,
+                movement: 4,
+                range: 2,
+                special: "Recon (20 energy): Reveal a 3-hex radius for 2 turns"
+            }
+        };
+
+        // Terrain Types
+        const terrainTypes = {
+            plains: { name: "Plains", moveCost: 1, defense: 0 },
+            forest: { name: "Forest", moveCost: 2, defense: 2 },
+            mountain: { name: "Mountain", moveCost: 3, defense: 3, blocksMovement: true },
+            water: { name: "Water", moveCost: 4, defense: 0, blocksMovement: true }
+        };
+
+        // Initialize the game
+        function initGame() {
+            createGameBoard();
+            spawnInitialUnits();
+            updateResourcesDisplay();
+            updateFogOfWar();
+            
+            // Show tutorial modal
+            document.getElementById('tutorial-modal').classList.remove('hidden');
+            
+            // Add event listeners
+            setupEventListeners();
+            
+            // Add initial log message
+            addToGameLog("Game initialized. Deploy your forces, Commander!");
+        }
+
+        // Create the hexagonal game board
+        function createGameBoard() {
+            const gameBoard = document.getElementById('game-board');
+            gameBoard.innerHTML = '';
+            
+            for (let row = 0; row < gameState.gridSize.rows; row++) {
+                const hexRow = document.createElement('div');
+                hexRow.className = 'hex-row';
+                
+                for (let col = 0; col < gameState.gridSize.cols; col++) {
+                    // Random terrain (weighted towards plains)
+                    const terrainRoll = Math.random();
+                    let terrain;
+                    
+                    if (terrainRoll < 0.7) terrain = 'plains';
+                    else if (terrainRoll < 0.85) terrain = 'forest';
+                    else if (terrainRoll < 0.95) terrain = 'mountain';
+                    else terrain = 'water';
+                    
+                    const tile = {
+                        row,
+                        col,
+                        terrain,
+                        unit: null,
+                        enemyUnit: null
+                    };
+                    
+                    gameState.tiles.push(tile);
+                    
+                    const hexagon = document.createElement('div');
+                    hexagon.className = `hexagon terrain-${terrain}`;
+                    hexagon.dataset.row = row;
+                    hexagon.dataset.col = col;
+                    
+                    // Add base on first and last row
+                    if ((row === 0 && col === 0) || (row === gameState.gridSize.rows - 1 && col === gameState.gridSize.cols - 1)) {
+                        const base = document.createElement('div');
+                        base.className = 'unit text-2xl';
+                        base.innerHTML = '<i class="fas fa-flag"></i>';
+                        hexagon.appendChild(base);
+                        
+                        if (row === 0 && col === 0) {
+                            base.classList.add('text-blue-400');
+                            tile.base = 'player';
+                        } else {
+                            base.classList.add('text-red-400');
+                            tile.base = 'enemy';
+                        }
+                    }
+                    
+                    hexRow.appendChild(hexagon);
+                }
+                
+                gameBoard.appendChild(hexRow);
+            }
+        }
+
+        // Spawn initial units
+        function spawnInitialUnits() {
+            // Player units
+            placeUnit(1, 1, 'infantry', 'player');
+            placeUnit(2, 0, 'tank', 'player');
+            
+            // Enemy units
+            placeUnit(8, 9, 'infantry', 'enemy');
+            placeUnit(9, 8, 'artillery', 'enemy');
+            placeUnit(7, 9, 'drone', 'enemy');
+        }
+
+        // Place a unit on the board
+        function placeUnit(row, col, type, faction) {
+            const tile = getTile(row, col);
+            if (!tile) return false;
+            
+            const unit = {
+                id: `${faction}-${type}-${Date.now()}`,
+                type,
+                faction,
+                row,
+                col,
+                health: unitTypes[type].health,
+                maxHealth: unitTypes[type].health,
+                hasMoved: false,
+                hasAttacked: false
+            };
+            
+            if (faction === 'player') {
+                gameState.units.push(unit);
+                tile.unit = unit;
+            } else {
+                gameState.enemyUnits.push(unit);
+                tile.enemyUnit = unit;
+            }
+            
+            updateTileAppearance(row, col);
+            return true;
+        }
+
+        // Get tile at coordinates
+        function getTile(row, col) {
+            if (row < 0 || row >= gameState.gridSize.rows || col < 0 || col >= gameState.gridSize.cols) {
+                return null;
+            }
+            return gameState.tiles[row * gameState.gridSize.cols + col];
+        }
+
+        // Update tile appearance based on its state
+        function updateTileAppearance(row, col) {
+            const tile = getTile(row, col);
+            if (!tile) return;
+            
+            const hexElement = document.querySelector(`.hexagon[data-row="${row}"][data-col="${col}"]`);
+            if (!hexElement) return;
+            
+            // Clear existing unit display
+            const existingUnit = hexElement.querySelector('.unit');
+            if (existingUnit) {
+                existingUnit.remove();
+            }
+            
+            // Add unit if present
+            if (tile.unit) {
+                const unitElement = document.createElement('div');
+                unitElement.className = `unit ${unitTypes[tile.unit.type].color}`;
+                unitElement.innerHTML = `<i class="fas ${unitTypes[tile.unit.type].icon}"></i>`;
+                unitElement.dataset.unitId = tile.unit.id;
+                hexElement.appendChild(unitElement);
+                
+                // Add health bar
+                const healthBar = document.createElement('div');
+                healthBar.className = 'health-bar';
+                const healthFill = document.createElement('div');
+                healthFill.className = 'health-fill';
+                healthFill.style.width = `${(tile.unit.health / tile.unit.maxHealth) * 100}%`;
+                healthBar.appendChild(healthFill);
+                unitElement.appendChild(healthBar);
+            }
+            
+            if (tile.enemyUnit) {
+                const unitElement = document.createElement('div');
+                unitElement.className = 'unit text-red-400';
+                unitElement.innerHTML = `<i class="fas ${unitTypes[tile.enemyUnit.type].icon}"></i>`;
+                unitElement.dataset.unitId = tile.enemyUnit.id;
+                hexElement.appendChild(unitElement);
+                
+                // Add health bar
+                const healthBar = document.createElement('div');
+                healthBar.className = 'health-bar';
+                const healthFill = document.createElement('div');
+                healthFill.className = 'health-fill';
+                healthFill.style.width = `${(tile.enemyUnit.health / tile.enemyUnit.maxHealth) * 100}%`;
+                healthBar.appendChild(healthFill);
+                unitElement.appendChild(healthBar);
+            }
+            
+            // Update fog of war
+            if (gameState.fogOfWar) {
+                if (gameState.visibleTiles.has(`${row},${col}`)) {
+                    hexElement.classList.remove('fog-of-war');
+                } else {
+                    hexElement.classList.add('fog-of-war');
+                }
+            }
+            
+            // Update selection and range highlights
+            hexElement.classList.remove('selected', 'movement-range', 'attack-range');
+            
+            if (gameState.selectedUnit && gameState.selectedUnit.row === row && gameState.selectedUnit.col === col) {
+                hexElement.classList.add('selected');
+            }
+            
+            if (gameState.movementRange.has(`${row},${col}`)) {
+                hexElement.classList.add('movement-range');
+            }
+            
+            if (gameState.attackRange.has(`${row},${col}`)) {
+                hexElement.classList.add('attack-range');
+            }
+        }
+
+        // Update fog of war based on unit visibility
+        function updateFogOfWar() {
+            if (!gameState.fogOfWar) return;
+            
+            gameState.visibleTiles.clear();
+            
+            // Player units reveal surrounding tiles
+            gameState.units.forEach(unit => {
+                const visionRange = unit.type === 'drone' ? 4 : 3;
+                for (let r = -visionRange; r <= visionRange; r++) {
+                    for (let c = -visionRange; c <= visionRange; c++) {
+                        // Simple circular vision (could be improved with proper hex distance)
+                        if (Math.abs(r) + Math.abs(c) <= visionRange) {
+                            const tile = getTile(unit.row + r, unit.col + c);
+                            if (tile) {
+                                gameState.visibleTiles.add(`${tile.row},${tile.col}`);
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Always reveal player base
+            gameState.visibleTiles.add('0,0');
+            
+            // Update all tiles
+            gameState.tiles.forEach(tile => {
+                updateTileAppearance(tile.row, tile.col);
+            });
+        }
+
+        // Calculate movement range for a unit
+        function calculateMovementRange(unit) {
+            gameState.movementRange.clear();
+            
+            if (unit.hasMoved) return;
+            
+            const visited = new Set();
+            const queue = [{ row: unit.row, col: unit.col, movesLeft: unitTypes[unit.type].movement }];
+            
+            while (queue.length > 0) {
+                const current = queue.shift();
+                const key = `${current.row},${current.col}`;
+                
+                if (visited.has(key)) continue;
+                visited.add(key);
+                
+                if (current.movesLeft >= 0) {
+                    gameState.movementRange.add(key);
+                }
+                
+                if (current.movesLeft <= 0) continue;
+                
+                // Check all 6 hex directions
+                const directions = [
+                    { dr: 0, dc: 1 },   // right
+                    { dr: 0, dc: -1 },  // left
+                    { dr: -1, dc: unit.row % 2 === 0 ? 0 : 1 },  // up-right
+                    { dr: -1, dc: unit.row % 2 === 0 ? -1 : 0 },  // up-left
+                    { dr: 1, dc: unit.row % 2 === 0 ? 0 : 1 },    // down-right
+                    { dr: 1, dc: unit.row % 2 === 0 ? -1 : 0 }    // down-left
+                ];
+                
+                for (const dir of directions) {
+                    const newRow = current.row + dir.dr;
+                    const newCol = current.col + dir.dc;
+                    const tile = getTile(newRow, newCol);
+                    
+                    if (!tile) continue;
+                    
+                    // Check if tile is blocked or occupied
+                    if (terrainTypes[tile.terrain].blocksMovement) continue;
+                    if (tile.unit || tile.enemyUnit) continue;
+                    
+                    const moveCost = terrainTypes[tile.terrain].moveCost;
+                    queue.push({
+                        row: newRow,
+                        col: newCol,
+                        movesLeft: current.movesLeft - moveCost
+                    });
+                }
+            }
+            
+            // Update tile appearances
+            gameState.movementRange.forEach(key => {
+                const [row, col] = key.split(',').map(Number);
+                updateTileAppearance(row, col);
+            });
+        }
+
+        // Calculate attack range for a unit
+        function calculateAttackRange(unit) {
+            gameState.attackRange.clear();
+            
+            if (unit.hasAttacked) return;
+            
+            const range = unitTypes[unit.type].range;
+            
+            for (let r = -range; r <= range; r++) {
+                for (let c = -range; c <= range; c++) {
+                    // Simple circular range (could be improved with proper hex distance)
+                    if (Math.abs(r) + Math.abs(c) <= range) {
+                        const tile = getTile(unit.row + r, unit.col + c);
+                        if (tile && tile.enemyUnit && tile.enemyUnit.faction !== unit.faction) {
+                            gameState.attackRange.add(`${tile.row},${tile.col}`);
+                        }
+                    }
+                }
+            }
+            
+            // Update tile appearances
+            gameState.attackRange.forEach(key => {
+                const [row, col] = key.split(',').map(Number);
+                updateTileAppearance(row, col);
+            });
+        }
+
+        // Move a unit to a new position
+        function moveUnit(unit, newRow, newCol) {
+            const oldTile = getTile(unit.row, unit.col);
+            const newTile = getTile(newRow, newCol);
+            
+            if (!oldTile || !newTile) return false;
+            
+            // Remove unit from old tile
+            if (unit.faction === 'player') {
+                oldTile.unit = null;
+            } else {
+                oldTile.enemyUnit = null;
+            }
+            
+            // Add unit to new tile
+            unit.row = newRow;
+            unit.col = newCol;
+            unit.hasMoved = true;
+            
+            if (unit.faction === 'player') {
+                newTile.unit = unit;
+            } else {
+                newTile.enemyUnit = unit;
+            }
+            
+            // Update both tiles
+            updateTileAppearance(oldTile.row, oldTile.col);
+            updateTileAppearance(newTile.row, newCol);
+            
+            // Update fog of war
+            updateFogOfWar();
+            
+            return true;
+        }
+
+        // Attack another unit
+        function attackUnit(attacker, defender) {
+            if (attacker.hasAttacked) return false;
+            
+            const attackPower = unitTypes[attacker.type].attack;
+            const defensePower = unitTypes[defender.type].defense;
+            const terrainDefense = terrainTypes[getTile(defender.row, defender.col).terrain].defense;
+            
+            // Calculate damage
+            let damage = Math.max(5, attackPower - (defensePower + terrainDefense));
+            
+            // Apply damage
+            defender.health -= damage;
+            
+            // Mark attacker as having attacked
+            attacker.hasAttacked = true;
+            
+            // Update defender's tile
+            updateTileAppearance(defender.row, defender.col);
+            
+            // Add to game log
+            addToGameLog(`${attacker.faction === 'player' ? 'Your' : 'Enemy'} ${unitTypes[attacker.type].name} attacked ${defender.faction === 'player' ? 'your' : 'an enemy'} ${unitTypes[defender.type].name} for ${damage} damage!`);
+            
+            // Check if defender was destroyed
+            if (defender.health <= 0) {
+                destroyUnit(defender);
+            }
+            
+            return true;
+        }
+
+        // Destroy a unit
+        function destroyUnit(unit) {
+            const tile = getTile(unit.row, unit.col);
+            if (!tile) return;
+            
+            // Remove from appropriate array
+            if (unit.faction === 'player') {
+                gameState.units = gameState.units.filter(u => u.id !== unit.id);
+                tile.unit = null;
+            } else {
+                gameState.enemyUnits = gameState.enemyUnits.filter(u => u.id !== unit.id);
+                tile.enemyUnit = null;
+                
+                // Award credits for enemy kills
+                if (unit.faction === 'enemy') {
+                    gameState.credits += unitTypes[unit.type].cost * 0.5;
+                    updateResourcesDisplay();
+                }
+            }
+            
+            // Update tile
+            updateTileAppearance(unit.row, unit.col);
+            
+            // Add to game log
+            addToGameLog(`${unit.faction === 'player' ? 'Your' : 'An enemy'} ${unitTypes[unit.type].name} was destroyed!`);
+            
+            // Check victory conditions
+            checkVictoryConditions();
+        }
+
+        // Check if victory conditions are met
+        function checkVictoryConditions() {
+            // Player wins if all enemy units are destroyed or enemy base is captured
+            const playerWins = gameState.enemyUnits.length === 0 || 
+                              (getTile(gameState.gridSize.rows - 1, gameState.gridSize.cols - 1).base !== 'enemy');
+            
+            // Enemy wins if all player units are destroyed or player base is captured
+            const enemyWins = gameState.units.length === 0 || 
+                             (getTile(0, 0).base !== 'player');
+            
+            if (playerWins) {
+                endGame(true);
+            } else if (enemyWins) {
+                endGame(false);
+            }
+        }
+
+        // End the game
+        function endGame(playerWon) {
+            gameState.gameOver = true;
+            
+            const modal = document.getElementById('result-modal');
+            const title = document.getElementById('result-title');
+            const message = document.getElementById('result-message');
+            
+            if (playerWon) {
+                title.textContent = "VICTORY!";
+                title.className = "text-3xl font-bold mb-4 text-green-400";
+                message.textContent = `You defeated the enemy forces in ${gameState.turn} turns!`;
+            } else {
+                title.textContent = "DEFEAT";
+                title.className = "text-3xl font-bold mb-4 text-red-400";
+                message.textContent = "Your forces have been overwhelmed. Better luck next time!";
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        // AI turn
+        function executeAITurn() {
+            addToGameLog("Enemy turn in progress...");
+            
+            // Simple AI: move towards player units and attack if possible
+            gameState.enemyUnits.forEach(unit => {
+                // Reset movement/attack flags
+                unit.hasMoved = false;
+                unit.hasAttacked = false;
+                
+                // Find closest player unit
+                let closestPlayerUnit = null;
+                let minDistance = Infinity;
+                
+                gameState.units.forEach(playerUnit => {
+                    const distance = Math.abs(unit.row - playerUnit.row) + Math.abs(unit.col - playerUnit.col);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestPlayerUnit = playerUnit;
+                    }
+                });
+                
+                if (!closestPlayerUnit) return;
+                
+                // Try to attack if in range
+                calculateAttackRange(unit);
+                if (gameState.attackRange.has(`${closestPlayerUnit.row},${closestPlayerUnit.col}`)) {
+                    attackUnit(unit, closestPlayerUnit);
+                    return;
+                }
+                
+                // Otherwise move towards the player unit
+                calculateMovementRange(unit);
+                
+                // Find the move that gets us closest to the target
+                let bestMove = null;
+                let bestMoveDistance = Infinity;
+                
+                gameState.movementRange.forEach(key => {
+                    const [row, col] = key.split(',').map(Number);
+                    const distance = Math.abs(row - closestPlayerUnit.row) + Math.abs(col - closestPlayerUnit.col);
+                    
+                    if (distance < bestMoveDistance) {
+                        bestMoveDistance = distance;
+                        bestMove = { row, col };
+                    }
+                });
+                
+                if (bestMove) {
+                    moveUnit(unit, bestMove.row, bestMove.col);
+                    
+                    // Try to attack after moving
+                    calculateAttackRange(unit);
+                    if (gameState.attackRange.has(`${closestPlayerUnit.row},${closestPlayerUnit.col}`)) {
+                        attackUnit(unit, closestPlayerUnit);
+                    }
+                }
+            });
+            
+            // End AI turn
+            endTurn();
+        }
+
+        // End current turn
+        function endTurn() {
+            if (gameState.currentPlayer === 'player') {
+                gameState.currentPlayer = 'enemy';
+                gameState.turn++;
+                updateResourcesDisplay();
+                
+                // Reset all player units
+                gameState.units.forEach(unit => {
+                    unit.hasMoved = false;
+                    unit.hasAttacked = false;
+                });
+                
+                // Execute AI turn after a delay
+                setTimeout(executeAITurn, 1000);
+            } else {
+                gameState.currentPlayer = 'player';
+                
+                // Reset all enemy units (they'll be reset again on their turn)
+                gameState.enemyUnits.forEach(unit => {
+                    unit.hasMoved = false;
+                    unit.hasAttacked = false;
+                });
+                
+                // Generate resources
+                gameState.credits += 150;
+                gameState.energy = Math.min(100, gameState.energy + 20);
+                updateResourcesDisplay();
+                
+                addToGameLog(`Turn ${gameState.turn} begins. Resources generated.`);
+            }
+            
+            // Clear selection and ranges
+            gameState.selectedUnit = null;
+            gameState.movementRange.clear();
+            gameState.attackRange.clear();
+            gameState.actionMode = null;
+            
+            // Update all tiles
+            gameState.tiles.forEach(tile => {
+                updateTileAppearance(tile.row, tile.col);
+            });
+            
+            // Update UI
+            updateActionButtons();
+            updateUnitInfo();
+        }
+
+        // Update resource displays
+        function updateResourcesDisplay() {
+            document.getElementById('credits').textContent = gameState.credits;
+            document.getElementById('energy').textContent = gameState.energy;
+            document.getElementById('end-turn-btn').disabled = gameState.currentPlayer !== 'player';
+        }
+
+        // Update action buttons based on selected unit
+        function updateActionButtons() {
+            const buttons = document.querySelectorAll('.action-btn');
+            buttons.forEach(btn => btn.disabled = true);
+            
+            if (!gameState.selectedUnit) return;
+            
+            const moveBtn = buttons[0];
+            const attackBtn = buttons[1];
+            const specialBtn = buttons[2];
+            
+            moveBtn.disabled = gameState.selectedUnit.hasMoved;
+            attackBtn.disabled = gameState.selectedUnit.hasAttacked;
+            specialBtn.disabled = gameState.energy < 20; // Minimum energy cost for any special
+            
+            // Enable buttons if we're in the corresponding mode
+            if (gameState.actionMode === 'move') {
+                moveBtn.classList.add('bg-blue-700', 'pulse');
+            } else {
+                moveBtn.classList.remove('bg-blue-700', 'pulse');
+            }
+            
+            if (gameState.actionMode === 'attack') {
+                attackBtn.classList.add('bg-red-700', 'pulse');
+            } else {
+                attackBtn.classList.remove('bg-red-700', 'pulse');
+            }
+        }
+
+        // Update unit info display
+        function updateUnitInfo() {
+            const unitInfo = document.getElementById('unit-info');
+            
+            if (!gameState.selectedUnit) {
+                unitInfo.innerHTML = '<p class="text-center py-8">Select a unit to view details</p>';
+                return;
+            }
+            
+            const unit = gameState.selectedUnit;
+            const typeInfo = unitTypes[unit.type];
+            
+            let html = `
+                <div class="flex items-center mb-4">
+                    <i class="fas ${typeInfo.icon} ${typeInfo.color} text-3xl mr-3"></i>
+                    <div>
+                        <h3 class="text-lg font-bold">${typeInfo.name}</h3>
+                        <p>${unit.faction === 'player' ? 'Your unit' : 'Enemy unit'}</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2 mb-4">
+                    <div class="bg-gray-700 p-2 rounded">
+                        <div class="text-xs text-gray-400">Health</div>
+                        <div>${unit.health}/${unit.maxHealth}</div>
+                    </div>
+                    <div class="bg-gray-700 p-2 rounded">
+                        <div class="text-xs text-gray-400">Attack</div>
+                        <div>${typeInfo.attack}</div>
+                    </div>
+                    <div class="bg-gray-700 p-2 rounded">
+                        <div class="text-xs text-gray-400">Defense</div>
+                        <div>${typeInfo.defense}</div>
+                    </div>
+                    <div class="bg-gray-700 p-2 rounded">
+                        <div class="text-xs text-gray-400">Range</div>
+                        <div>${typeInfo.range}</div>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-700 p-2 rounded mb-2">
+                    <div class="text-xs text-gray-400">Movement</div>
+                    <div class="flex items-center">
+                        <div class="w-full bg-gray-600 rounded-full h-2">
+                            <div class="bg-blue-400 h-2 rounded-full" style="width: ${unit.hasMoved ? '0' : '100'}%"></div>
+                        </div>
+                        <span class="ml-2">${unit.hasMoved ? 'Used' : 'Available'}</span>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-700 p-2 rounded">
+                    <div class="text-xs text-gray-400">Attack</div>
+                    <div class="flex items-center">
+                        <div class="w-full bg-gray-600 rounded-full h-2">
+                            <div class="bg-red-400 h-2 rounded-full" style="width: ${unit.hasAttacked ? '0' : '100'}%"></div>
+                        </div>
+                        <span class="ml-2">${unit.hasAttacked ? 'Used' : 'Available'}</span>
+                    </div>
+                </div>
+            `;
+            
+            if (unit.faction === 'player' && typeInfo.special) {
+                html += `
+                    <div class="mt-4 bg-gray-700 p-2 rounded">
+                        <div class="text-xs text-gray-400">Special Ability</div>
+                        <div class="text-sm">${typeInfo.special}</div>
+                    </div>
+                `;
+            }
+            
+            unitInfo.innerHTML = html;
+        }
+
+        // Add message to game log
+        function addToGameLog(message) {
+            const log = document.getElementById('game-log');
+            const entry = document.createElement('p');
+            entry.textContent = `[Turn ${gameState.turn}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Tile click
+            document.getElementById('game-board').addEventListener('click', (e) => {
+                if (gameState.gameOver || gameState.currentPlayer !== 'player') return;
+                
+                const hexagon = e.target.closest('.hexagon');
+                if (!hexagon) return;
+                
+                const row = parseInt(hexagon.dataset.row);
+                const col = parseInt(hexagon.dataset.col);
+                const tile = getTile(row, col);
+                
+                // Building mode
+                if (gameState.actionMode === 'build') {
+                    if (gameState.buildingUnit && !tile.unit && !tile.enemyUnit && !tile.base) {
+                        const cost = unitTypes[gameState.buildingUnit].cost;
+                        if (gameState.credits >= cost) {
+                            if (placeUnit(row, col, gameState.buildingUnit, 'player')) {
+                                gameState.credits -= cost;
+                                updateResourcesDisplay();
+                                addToGameLog(`Built new ${unitTypes[gameState.buildingUnit].name} at (${row}, ${col})`);
+                            }
+                        } else {
+                            addToGameLog("Not enough credits to build this unit!");
+                        }
+                    }
+                    
+                    gameState.actionMode = null;
+                    gameState.buildingUnit = null;
+                    updateActionButtons();
+                    return;
+                }
+                
+                // Check if clicking on a unit
+                const unitElement = e.target.closest('.unit');
+                if (unitElement && unitElement.dataset.unitId) {
+                    // Find the unit
+                    const unitId = unitElement.dataset.unitId;
+                    let unit = gameState.units.find(u => u.id === unitId);
+                    
+                    if (unit) {
+                        // Select player unit
+                        if (gameState.selectedUnit?.id === unit.id) {
+                            // Deselect if clicking the same unit
+                            gameState.selectedUnit = null;
+                            gameState.movementRange.clear();
+                            gameState.attackRange.clear();
+                            gameState.actionMode = null;
+                        } else {
+                            // Select new unit
+                            gameState.selectedUnit = unit;
+                            calculateMovementRange(unit);
+                            calculateAttackRange(unit);
+                            gameState.actionMode = null;
+                        }
+                    } else {
+                        // Check if enemy unit
+                        unit = gameState.enemyUnits.find(u => u.id === unitId);
+                        if (unit && gameState.actionMode === 'attack' && gameState.selectedUnit) {
+                            // Attack enemy
+                            if (gameState.attackRange.has(`${unit.row},${unit.col}`)) {
+                                attackUnit(gameState.selectedUnit, unit);
+                                gameState.actionMode = null;
+                            }
+                        }
+                    }
+                } else if (gameState.selectedUnit) {
+                    // Check if clicking on movement range
+                    if (gameState.actionMode === 'move' && gameState.movementRange.has(`${row},${col}`)) {
+                        moveUnit(gameState.selectedUnit, row, col);
+                        gameState.actionMode = null;
+                    }
+                }
+                
+                // Update UI
+                gameState.tiles.forEach(t => updateTileAppearance(t.row, t.col));
+                updateActionButtons();
+                updateUnitInfo();
+            });
+            
+            // Action buttons
+            document.querySelectorAll('.action-btn').forEach((btn, index) => {
+                btn.addEventListener('click', () => {
+                    if (!gameState.selectedUnit || gameState.gameOver || gameState.currentPlayer !== 'player') return;
+                    
+                    if (index === 0) { // Move
+                        if (gameState.actionMode === 'move') {
+                            gameState.actionMode = null;
+                        } else {
+                            gameState.actionMode = 'move';
+                            calculateMovementRange(gameState.selectedUnit);
+                        }
+                    } else if (index === 1) { // Attack
+                        if (gameState.actionMode === 'attack') {
+                            gameState.actionMode = null;
+                            gameState.attackRange.clear();
+                        } else {
+                            gameState.actionMode = 'attack';
+                            calculateAttackRange(gameState.selectedUnit);
+                        }
+                    } else if (index === 2) { // Special
+                        // Implement special abilities here
+                        addToGameLog("Special ability used!");
+                        gameState.energy -= 20;
+                        updateResourcesDisplay();
+                    }
+                    
+                    updateActionButtons();
+                    gameState.tiles.forEach(t => updateTileAppearance(t.row, t.col));
+                });
+            });
+            
+            // Build buttons
+            document.querySelectorAll('.build-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (gameState.gameOver || gameState.currentPlayer !== 'player') return;
+                    
+                    const unitType = btn.dataset.type;
+                    const cost = unitTypes[unitType].cost;
+                    
+                    if (gameState.credits >= cost) {
+                        gameState.actionMode = 'build';
+                        gameState.buildingUnit = unitType;
+                        gameState.selectedUnit = null;
+                        gameState.movementRange.clear();
+                        gameState.attackRange.clear();
+                        
+                        // Highlight buildable tiles (empty tiles near base)
+                        for (let row = 0; row < 3; row++) {
+                            for (let col = 0; col < 3; col++) {
+                                const tile = getTile(row, col);
+                                if (tile && !tile.unit && !tile.enemyUnit && !tile.base) {
+                                    gameState.movementRange.add(`${row},${col}`);
+                                }
+                            }
+                        }
+                        
+                        updateActionButtons();
+                        gameState.tiles.forEach(t => updateTileAppearance(t.row, t.col));
+                        addToGameLog(`Select a tile to build ${unitType}`);
+                    } else {
+                        addToGameLog("Not enough credits to build this unit!");
+                    }
+                });
+            });
+            
+            // End turn button
+            document.getElementById('end-turn-btn').addEventListener('click', endTurn);
+            
+            // Tutorial modal
+            document.getElementById('close-tutorial').addEventListener('click', () => {
+                document.getElementById('tutorial-modal').classList.add('hidden');
+            });
+            
+            document.getElementById('start-game').addEventListener('click', () => {
+                document.getElementById('tutorial-modal').classList.add('hidden');
+                addToGameLog("Tutorial completed. Good luck, Commander!");
+            });
+            
+            // Result modal
+            document.getElementById('restart-btn').addEventListener('click', () => {
+                document.getElementById('result-modal').classList.add('hidden');
+                resetGame();
+            });
+            
+            document.getElementById('quit-btn').addEventListener('click', () => {
+                document.getElementById('result-modal').classList.add('hidden');
+                // In a real game, this would return to main menu
+                addToGameLog("Game ended. Refresh the page to play again.");
+            });
+        }
+
+        // Reset the game
+        function resetGame() {
+            gameState.units = [];
+            gameState.enemyUnits = [];
+            gameState.selectedUnit = null;
+            gameState.currentPlayer = 'player';
+            gameState.credits = 1000;
+            gameState.energy = 50;
+            gameState.turn = 1;
+            gameState.gameOver = false;
+            gameState.buildingUnit = null;
+            gameState.movementRange.clear();
+            gameState.attackRange.clear();
+            gameState.actionMode = null;
+            
+            createGameBoard();
+            spawnInitialUnits();
+            updateResourcesDisplay();
+            updateFogOfWar();
+            
+            document.getElementById('game-log').innerHTML = '<p class="text-gray-400">Welcome to Battle Commander! Deploy your units and defeat the enemy forces.</p>';
+            addToGameLog("New game started. Good luck, Commander!");
+        }
+
+        // Initialize the game when the page loads
+        window.addEventListener('DOMContentLoaded', initGame);
+    </script>
 </body>
 </html>
